@@ -161,6 +161,12 @@ def render():
     st.caption("溜まった投稿を評価し、ワークフローのどこを直すか判断するためのページ")
     st.divider()
 
+    # 「何を評価しているか」の参照として、ワークフロー設計をここに置く
+    with st.expander("AIエージェント部署の設計（何を評価しているか）"):
+        st.image(DIAGRAM_PNG, use_container_width=True)
+        st.caption("紫 = 生成AI（Gemini）が処理 / グレー = 人間・検索・決定。"
+                   "入力(retrieve)・judgeの採点(evaluate)・reviseループ・しきい値の妥当性を、このページで評価する。")
+
     df = posts.load_df()
     if len(df) == 0:
         st.info("まだ投稿がありません。『生成』ページで投稿を作ってください。")

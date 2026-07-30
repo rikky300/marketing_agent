@@ -1,11 +1,11 @@
-"""生成ページ。テーマを選んで投稿を作り、その場で👍/👎まで付けられる。"""
+"""生成ページ（デプロイ対象）。テーマを選んで投稿を作り、コピーする。
+評価(採点表示・👍/👎・ダッシュボード)は含めない。それは別アプリ eval_app.py。"""
 import json
 from datetime import datetime
 
 import streamlit as st
 import streamlit.components.v1 as components
 
-import config
 from graph import app as agent
 import posts
 
@@ -58,8 +58,9 @@ def _run_agent(theme):
     return final_state, logs
 
 
-def _save_generated(run_id, fs):
-    """生成結果を投稿物DBに1行追加。initial_score / final_from も記録する。"""
+def _save_generated(run_id, theme, fs):
+    """生成結果を投稿物DBに1行追加。initial_score / final_from も記録する。
+    theme は明示的に渡す（stream_mode='updates' では final_state に theme が入らないため）。"""
     ev = fs.get("evaluation")
     d = fs.get("draft", "")
     cands = fs.get("candidates") or []
@@ -70,7 +71,7 @@ def _save_generated(run_id, fs):
         final_from = "initial" if best_idx == 0 else "revised"
     posts.add_post({
         "id": run_id,
-        "theme": fs.get("theme", ""),
+        "theme": theme,
         "draft": d,
         "hook": ev.hook if ev else None,
         "specificity": ev.specificity if ev else None,
@@ -141,20 +142,16 @@ def render():
             st.session_state.result = final_state if final_state.get("draft") else None
             st.session_state.logs = logs
             st.session_state.running = False
-            # この生成を一意に識別し、評価の二重記録を防ぐ
+            # この生成を一意に識別（投稿物DBの行id）。評価は eval_app.py で後から行う。
             st.session_state.run_id = datetime.now().isoformat(timespec="seconds")
-            st.session_state.rated_run = None
             if st.session_state.result:
-                _save_generated(st.session_state.run_id, st.session_state.result)
+                _save_generated(st.session_state.run_id, theme, st.session_state.result)
         st.rerun()
 
     if not st.session_state.result:
         return
 
-    result = st.session_state.result
-    e = result.get("evaluation")
-    draft = result.get("draft", "")
-    revisions = result.get("revisions", 0)
+    draft = st.session_state.result.get("draft", "")
 
     st.divider()
     st.subheader("完成した投稿")
@@ -167,35 +164,3 @@ def render():
         st.warning(f"{char_count}字 — 140字を超えています。投稿前に調整してください。")
     else:
         st.caption(f"文字数: {char_count} / 140")
-
-    if e:
-        st.markdown(f"""
-<div class="score-row">
-  <span class="badge">フック {e.hook} / 5</span>
-  <span class="badge">具体性 {e.specificity} / 5</span>
-  <span class="badge">修正 {revisions} 回</span>
-</div>
-""", unsafe_allow_html=True)
-        st.info(f"改善コメント: {e.comment}")
-
-    # 「自分なら投稿する?」をその場で記録（詳しい評価は評価ページで）
-    if e:
-        run_id = st.session_state.get("run_id", "")
-        rated = run_id != "" and st.session_state.get("rated_run") == run_id
-        st.markdown("**自分ならこれ投稿する?**")
-        c1, c2 = st.columns(2)
-        if c1.button("👍 投稿する", disabled=rated, use_container_width=True):
-            posts.set_label(run_id, "good")
-            st.session_state.rated_run = run_id
-            st.rerun()
-        if c2.button("👎 投稿しない", disabled=rated, use_container_width=True):
-            posts.set_label(run_id, "bad")
-            st.session_state.rated_run = run_id
-            st.rerun()
-        if rated:
-            st.caption("評価を記録しました ✓　詳しい評価は「評価」ページで")
-
-    if st.session_state.logs:
-        with st.expander("生成ログ"):
-            for log in st.session_state.logs:
-                st.markdown(f'<div class="log-line">{log}</div>', unsafe_allow_html=True)
