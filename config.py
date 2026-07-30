@@ -12,9 +12,8 @@ COLLECTION = "product"        # DB内のコレクション名（index.pyとrag.p
 
 # 検索・生成・ループの設定
 TOP_K = 3            # 検索で取り出すチャンク数
-NUM_DRAFTS = 3       # 1回に生成する案の数
 THRESHOLD = 8        # 合格とみなす合計点
-MAX_REVISIONS = 3    # 最大の書き直し回数
+MAX_REVISIONS = 3    # 最大の書き直し回数（初稿＋この回数まで書き直す）
 
 # チャンク分割
 CHUNK_SIZE = 300

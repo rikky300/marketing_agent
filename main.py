@@ -29,7 +29,8 @@ def main():
     print(f"\n『{theme}』で投稿を作成します...\n")
 
     result = app.invoke(
-        {"theme": theme, "context": "", "draft": "", "evaluation": None, "revisions": 0})
+        {"theme": theme, "context": "", "draft": "", "evaluation": None,
+         "revisions": 0, "candidates": []})
 
     post = result["draft"]
     e = result["evaluation"]
