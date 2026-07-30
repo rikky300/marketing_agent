@@ -4,23 +4,17 @@ Streamlit UI。ブラウザからテーマを選んで投稿を生成する。
 （事前に python index.py でベクトルDBを作っておくこと）
 """
 import streamlit as st
-from graph import app as agent, build_app
-from nodes import State
 
-import os, subprocess, sys
-from pathlib import Path
-import config
-
-# chroma_db がなければ index.py を実行してDBを作る（Streamlit Cloud対応）
-if not Path(config.CHROMA_DIR).exists():
-    subprocess.run([sys.executable, "index.py"], check=True)
-# ── ページ設定 ──
+# ページ設定は最初のst命令でなければならない
 st.set_page_config(
     page_title="SNSマーケティングAgent",
     page_icon="✍️",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
+
+# グラフのimportはset_page_configの後（rag.pyの初期化がここで走る）
+from graph import app as agent
 
 # ── スマホ対応のカスタムCSS ──
 st.markdown("""
