@@ -6,3 +6,6 @@ langgraph
 streamlit
 pydantic
 python-dotenv
+pypdf
+beautifulsoup4
+requests

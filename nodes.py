@@ -46,6 +46,10 @@ def _candidate(draft, evaluation):
 
 # ── ノード ──
 def retrieve_node(state: State):
+    # 添付ドキュメントから作った context が既にあれば、それを使う（既定のproduct.mdは引かない）。
+    if state.get("context", "").strip():
+        print("[検索] 添付ドキュメントの情報を使用")
+        return {}
     context = retrieve(state["theme"])
     print("[検索] 関連情報を取得")
     return {"context": context}

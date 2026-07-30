@@ -1,5 +1,6 @@
 """生成ページ（デプロイ対象）。テーマを選んで投稿を作り、コピーする。
 評価(採点表示・👍/👎・ダッシュボード)は含めない。それは別アプリ eval_app.py。"""
+import hashlib
 import json
 from datetime import datetime
 
@@ -8,6 +9,8 @@ import streamlit.components.v1 as components
 
 from graph import app as agent
 import posts
+import rag
+import sources
 
 PRESET_THEMES = [
     "開発の裏側",
@@ -26,12 +29,30 @@ def _pick_theme(preset, free_input):
     return PRESET_THEMES[0]
 
 
-def _run_agent(theme):
-    """エージェントを回して final_state とログを返す。"""
+def _get_store(source_text):
+    """添付テキストの in-memory ベクトルストアをセッションにキャッシュする（再埋め込みを避ける）。"""
+    h = hashlib.sha1(source_text.encode("utf-8")).hexdigest()
+    if st.session_state.get("_src_hash") != h:
+        st.session_state["_src_hash"] = h
+        st.session_state["_src_store"] = rag.build_store(source_text)
+    return st.session_state["_src_store"]
+
+
+def _context_for(source_text, theme):
+    """添付テキストから context を作る。添付が無ければ空文字（＝既定のproduct.mdを使う）。"""
+    if not source_text:
+        return ""
+    if rag.is_short(source_text):
+        return source_text                      # 短ければ全文をそのまま
+    return rag.search_store(_get_store(source_text), theme)  # 長ければ検索
+
+
+def _run_agent(theme, context):
+    """エージェントを回して final_state とログを返す。context があれば添付ドキュメントを使う。"""
     logs = []
     final_state = {}
     for step in agent.stream(
-        {"theme": theme, "context": "", "draft": "", "evaluation": None,
+        {"theme": theme, "context": context, "draft": "", "evaluation": None,
          "revisions": 0, "candidates": []},
         stream_mode="updates",
     ):
@@ -128,19 +149,40 @@ def render():
     st.caption("プロダクト情報をもとに、Xの投稿案を自動生成します")
     st.divider()
 
+    st.subheader("製品情報（任意）")
+    up = st.file_uploader("PDF / テキスト(.txt/.md) をアップロード", type=["pdf", "txt", "md"])
+    src_url = st.text_input("またはURL", placeholder="https://...")
+    pasted = st.text_area("または製品情報を直接入力",
+                          placeholder="製品の説明・特徴・誰向けか などを貼り付け", height=120)
+    st.caption("ファイル / URL / 直接入力 のどれかで指定できます（優先順: ファイル → URL → 手入力）。"
+               "指定すると、その製品情報『だけ』を使って生成。未指定ならサンプル(既定のproduct.md)で生成。"
+               "入力内容のベクトルは保存しません。")
+
     st.subheader("テーマ")
     preset = st.selectbox("プリセットから選ぶ", ["（自由入力）"] + PRESET_THEMES)
     free_input = st.text_input("または自由に入力", placeholder="例: リリースのお知らせ")
     theme = _pick_theme(preset, free_input)
 
     if st.button("投稿を生成する", type="primary", disabled=st.session_state.running):
+        # 添付ソースを読み取る（失敗したら生成しない）
+        try:
+            source_text, source_label = sources.extract_source(up, src_url, pasted)
+        except Exception as ex:
+            st.error(f"製品情報の読み取りに失敗しました: {ex}")
+            st.stop()
+        if source_text is not None and not source_text.strip():
+            st.error("テキストを抽出できませんでした（スキャンPDF等の可能性）。別のファイル/URLを試してください。")
+            st.stop()
+
         st.session_state.result = None
         st.session_state.logs = []
         st.session_state.running = True
         with st.spinner(f"『{theme}』で投稿を生成中..."):
-            final_state, logs = _run_agent(theme)
+            context = _context_for(source_text, theme)
+            final_state, logs = _run_agent(theme, context)
             st.session_state.result = final_state if final_state.get("draft") else None
             st.session_state.logs = logs
+            st.session_state.source_label = source_label
             st.session_state.running = False
             # この生成を一意に識別（投稿物DBの行id）。評価は eval_app.py で後から行う。
             st.session_state.run_id = datetime.now().isoformat(timespec="seconds")
@@ -155,6 +197,8 @@ def render():
 
     st.divider()
     st.subheader("完成した投稿")
+    src_label = st.session_state.get("source_label")
+    st.caption(f"参照した製品情報: {src_label}" if src_label else "参照した製品情報: サンプル（既定のproduct.md）")
     st.text_area("Xに貼り付けてください", value=draft, height=180, key="draft_area")
     _copy_button(draft)
 

@@ -46,8 +46,31 @@ with open(config.PLAYBOOK_FILE, encoding="utf-8") as f:
 
 
 def retrieve(query):
-    """テーマに関連するチャンクを検索して、つなげた文字列で返す。"""
+    """テーマに関連するチャンクを検索して、つなげた文字列で返す（既定のproduct.md）。"""
     docs = _retriever.invoke(query)
+    return "\n---\n".join(d.page_content for d in docs)
+
+
+# ── 添付ドキュメント（PDF/テキスト/URL）用。ベクトルは保存せずメモリ上だけで扱う ──
+def is_short(text):
+    """埋め込みせず全文をそのまま使ってよい短さか。"""
+    return len(text) <= config.SHORT_TEXT_LIMIT
+
+
+def build_store(text):
+    """テキストを分割して in-memory ベクトルストアを作る（ディスクに保存しない）。長文用。"""
+    from langchain_core.vectorstores import InMemoryVectorStore
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP)
+    chunks = splitter.split_text(text)
+    return InMemoryVectorStore.from_texts(chunks, embedding=embeddings)
+
+
+def search_store(store, query):
+    """in-memory ストアからテーマ関連チャンクを検索して、つなげた文字列で返す。"""
+    docs = store.similarity_search(query, k=config.TOP_K)
     return "\n---\n".join(d.page_content for d in docs)
 
 
