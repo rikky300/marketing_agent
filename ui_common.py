@@ -3,6 +3,10 @@ import streamlit as st
 
 _CSS = """
 <style>
+/* Streamlit Cloud の余計な表示（上部ツールバー・メニュー・フッター）を隠す */
+#MainMenu {{ visibility: hidden; }}
+header {{ visibility: hidden; }}
+footer {{ visibility: hidden; }}
 .block-container {{ padding: 1.5rem 1rem; max-width: {max_width}; }}
 .stTextArea textarea {{ font-size: 1rem; line-height: 1.7; }}
 .stButton button {{ width: 100%; font-size: 1rem; padding: 0.6rem; }}
