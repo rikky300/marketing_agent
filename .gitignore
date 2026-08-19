@@ -6,3 +6,5 @@ __pycache__/
 CLAUDE.md
 data/*
 !data/posts.csv
+models/
+.DS_Store

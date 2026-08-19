@@ -14,7 +14,7 @@ writer = ChatGoogleGenerativeAI(model=config.CHAT_MODEL, temperature=0.9)
 
 
 class Evaluation(BaseModel):
-    """SNS投稿を辛口の編集者として採点した結果。"""
+    """SNS投稿を辛口の編集者として採点した結果（scoring_rubric.md の5軸）。"""
     hook: int = Field(description=(
         "冒頭一行が読み手のスクロールを止める力。1〜5の整数。"
         "5=最初の一行で『自分のことだ』と思わせ続きを読みたくなる。"
@@ -25,6 +25,16 @@ class Evaluation(BaseModel):
         "具体性。1〜5の整数。5=数字や固有の体験があり情景が浮かぶ。"
         "3=一部具体的だが抽象語も混じる。1=抽象的で中身が薄い。"
     ))
+    clarity: int = Field(description=(
+        "明確さ・一貫性。1〜5の整数。5=主張が1つに絞られ迷わず読める。"
+        "3=概ね分かるがやや冗長/要素が多い。1=散らかる・冗長・"
+        "『承知しました』等のメタ文や指示文が混入している。"
+    ))
+    relatability: int = Field(description=(
+        "共感・自分ごと化。1〜5の整数。5=読者(個人開発者)の悩み・感情に刺さる。"
+        "3=一般論としては分かる。1=発信者視点だけで読者の感情に触れない。"
+    ))
+    binary: int = Field(description="総合good/bad。良い(自分なら投稿する/伸びそう)なら1、そうでなければ0。")
     length_ok: bool = Field(description="全体が140字以内に収まっているか")
     comment: str = Field(description="最も効く改善点を一つだけ、短い日本語で")
 

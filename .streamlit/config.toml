@@ -3,3 +3,9 @@ toolbarMode = "minimal"
 
 [browser]
 gatherUsageStats = false
+
+[server]
+# torch/transformers を読むと、Streamlitのファイル監視が transformers の
+# サブモジュール(zoedepth→torchvision)を走査して ModuleNotFoundError を吐く。
+# torchvisionは不要なので、監視を切って回避する（変更を反映するには再起動）。
+fileWatcherType = "none"

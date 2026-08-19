@@ -21,23 +21,26 @@ POSTS_FILE = "data/posts.csv"
 COLUMNS = [
     # 生成時に自動で埋まる
     "id", "created_at", "theme", "draft",
-    "hook", "specificity", "length_ok", "auto_score", "revisions", "char_count",
+    "hook", "specificity", "clarity", "relatability", "binary",
+    "length_ok", "auto_score", "revisions", "char_count",
     "initial_score", "final_from",
     # 人間評価（評価ページで後から入力）
-    "label", "rated_at", "human_hook", "human_specificity", "human_grounded",
+    "label", "rated_at",
+    "human_hook", "human_specificity", "human_clarity", "human_relatability", "human_grounded",
     # 投稿・実エンゲージメント（投稿後に手入力。初期は空=null）
     "posted", "posted_at", "url",
     "impressions", "likes", "reposts", "replies", "bookmarks", "notes",
 ]
 ENGAGEMENT_COLS = ["impressions", "likes", "reposts", "replies", "bookmarks"]
 # 評価ページで人間が編集する列
-HUMAN_COLS = ["label", "human_hook", "human_specificity", "human_grounded"]
+HUMAN_COLS = ["label", "human_hook", "human_specificity", "human_clarity", "human_relatability", "human_grounded"]
 
 # 空のCSV列を pandas が float 扱いして文字列代入で落ちるのを防ぐため、型を明示する
 _STR_COLS = ["id", "created_at", "theme", "draft", "length_ok", "final_from",
              "label", "rated_at", "human_grounded", "posted", "posted_at", "url", "notes"]
-_NUM_COLS = ["hook", "specificity", "auto_score", "revisions", "char_count", "initial_score",
-             "human_hook", "human_specificity",
+_NUM_COLS = ["hook", "specificity", "clarity", "relatability", "binary",
+             "auto_score", "revisions", "char_count", "initial_score",
+             "human_hook", "human_specificity", "human_clarity", "human_relatability",
              "impressions", "likes", "reposts", "replies", "bookmarks"]
 
 
@@ -65,12 +68,10 @@ def save_df(df: pd.DataFrame):
     df[COLUMNS].to_csv(POSTS_FILE, index=False)
 
 
-def compute_auto_score(hook, specificity, length_ok):
-    """nodes._score と同じ定義。文字数オーバーは -5。"""
-    total = hook + specificity
-    if not length_ok:
-        total -= 5
-    return total
+def compute_auto_score(hook, specificity, clarity, relatability):
+    """nodes._score と同じ定義。2*hook + specificity + clarity + relatability（最大25点）。
+    length_ok はハード条件なのでスコアには含めない（should_continue で別途判定）。"""
+    return 2 * hook + specificity + clarity + relatability
 
 
 def add_post(rec: dict):
@@ -110,7 +111,7 @@ def agreement_summary(df=None) -> dict:
         return {"n": 0}
 
     is_good = rated["label"] == "good"
-    is_pass = rated["auto_score"] >= config.THRESHOLD
+    is_pass = rated["auto_score"] >= config.PASS_TOTAL
     passed = rated[is_pass]
 
     def mean(s):
@@ -129,10 +130,12 @@ def agreement_summary(df=None) -> dict:
 
 
 def axis_bias(df=None) -> dict:
-    """judge と 人間 の軸別スコア差。mean_diff>0 は judge が甘い（人間より高くつけがち）。"""
+    """BERTモデル と 人間 の軸別スコア差。mean_diff>0 はモデルが甘い（人間より高くつけがち）。"""
     df = load_df() if df is None else df
     out = {}
-    for j, h in [("hook", "human_hook"), ("specificity", "human_specificity")]:
+    pairs = [("hook", "human_hook"), ("specificity", "human_specificity"),
+             ("clarity", "human_clarity"), ("relatability", "human_relatability")]
+    for j, h in pairs:
         sub = df[df[h].notna() & df[j].notna()]
         if len(sub):
             diff = sub[j] - sub[h]
@@ -152,7 +155,7 @@ def grounded_summary(df=None) -> dict:
     if n == 0:
         return {"n": 0}
     ng = sub[sub["human_grounded"] == "ng"]
-    ng_but_pass = ng[ng["auto_score"] >= config.THRESHOLD]
+    ng_but_pass = ng[ng["auto_score"] >= config.PASS_TOTAL]
     return {"n": int(n), "ng": int(len(ng)),
             "ng_rate": round(len(ng) / n, 2), "ng_but_pass": int(len(ng_but_pass))}
 
@@ -181,7 +184,7 @@ def threshold_summary(df=None) -> dict:
     n = len(scored)
     if n == 0:
         return {"n": 0}
-    passed = scored[scored["auto_score"] >= config.THRESHOLD]
+    passed = scored[scored["auto_score"] >= config.PASS_TOTAL]
     rated_pass = passed[passed["label"].isin(["good", "bad"])]
     good_rate = (round(float((rated_pass["label"] == "good").mean()), 2)
                  if len(rated_pass) else None)

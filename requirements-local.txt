@@ -1,0 +1,6 @@
+# ローカル専用（自前採点モデルを使うときだけ）。Streamlit Cloud の requirements.txt には入れない。
+# インストール: pip install -r requirements-local.txt
+torch
+transformers
+fugashi
+unidic-lite

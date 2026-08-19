@@ -86,8 +86,13 @@ def _save_generated(run_id, theme, fs):
         "id": run_id, "theme": theme, "draft": d,
         "hook": ev.hook if ev else None,
         "specificity": ev.specificity if ev else None,
+        "clarity": getattr(ev, "clarity", None) if ev else None,
+        "relatability": getattr(ev, "relatability", None) if ev else None,
+        "binary": getattr(ev, "binary", None) if ev else None,
         "length_ok": ev.length_ok if ev else None,
-        "auto_score": (posts.compute_auto_score(ev.hook, ev.specificity, ev.length_ok)
+        "auto_score": (posts.compute_auto_score(
+            ev.hook, ev.specificity,
+            getattr(ev, "clarity", 3), getattr(ev, "relatability", 3))
                        if ev else None),
         "revisions": fs.get("revisions", 0),
         "char_count": len(d),

@@ -33,8 +33,10 @@ def _label(x, y, text, anchor="start"):
     return f'<text x="{x}" y="{y}" text-anchor="{anchor}" font-size="12" fill="{_LABEL}">{text}</text>'
 
 
+_SCORE_NOTE = "#888880"
+
 _SVG = f"""
-<svg width="100%" viewBox="0 0 680 712" xmlns="http://www.w3.org/2000/svg" role="img"
+<svg width="100%" viewBox="0 0 680 760" xmlns="http://www.w3.org/2000/svg" role="img"
      style="font-family:'Hiragino Sans','Noto Sans JP',-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;">
 <title>AIエージェント部署の設計</title>
 <desc>生成AIを使う草案ライターと採点担当を紫、テーマ入力・リサーチ・決定・人間の投稿をグレーで示し、
@@ -49,34 +51,35 @@ should_continue の判定で最大3回まわる採点ループを描いたワー
 <text x="340" y="38" text-anchor="middle" font-size="12" fill="{_GRAY_TITLE}">テーマ入力</text>
 {_arrow(340, 50, 340, 64)}
 
-{_card(190, 66, 300, 78, "リサーチ担当", "retrieve_node", "ChromaDB をテーマで検索", "human")}
+{_card(190, 66, 300, 78, "リサーチ担当", "retrieve_node", "ChromaDB / 添付ドキュメントを検索", "human")}
 {_arrow(340, 144, 340, 174)}
 
-{_card(190, 176, 300, 78, "草案ライター", "generate_node / revise_node", "writer(Gemini) で投稿を生成・修正", "ai")}
+{_card(190, 176, 300, 78, "草案ライター", "generate_node / revise_node", "writer(Gemini) で初稿・書き直しを生成", "ai")}
 {_arrow(340, 254, 340, 284)}
 {_label(400, 273, "書いたら採点")}
 
-{_card(190, 286, 300, 78, "採点担当", "evaluate_node", "judge(Gemini) で採点し候補に貯める", "ai")}
-{_arrow(340, 364, 340, 394)}
+{_card(190, 286, 300, 78, "採点担当", "evaluate_node", "自前BERTで4軸採点・全候補に貯める", "ai")}
+<text x="340" y="380" text-anchor="middle" font-size="11" fill="{_SCORE_NOTE}">hook×2 + 具体性 + 明確さ + 共感　最大25点</text>
+{_arrow(340, 390, 340, 414)}
 
-<rect x="240" y="396" width="200" height="34" rx="8" fill="{_GRAY_FILL}" stroke="{_GRAY_LINE}" stroke-width="1.5"/>
-<text x="340" y="417" text-anchor="middle" font-size="12" fill="{_GRAY_TITLE}">should_continue（判定）</text>
-{_arrow(340, 430, 340, 464)}
-{_label(352, 452, "合格8点 / 上限3回")}
+<rect x="230" y="416" width="220" height="34" rx="8" fill="{_GRAY_FILL}" stroke="{_GRAY_LINE}" stroke-width="1.5"/>
+<text x="340" y="437" text-anchor="middle" font-size="12" fill="{_GRAY_TITLE}">should_continue（判定）</text>
+{_arrow(340, 450, 340, 484)}
+{_label(352, 472, "合格18点 / 140字以内 / 上限3回")}
 
-<path d="M240 413 L95 413 L95 215 L184 215" fill="none" stroke="{_GRAY_LINE}" stroke-width="1.5" marker-end="url(#ar)"/>
-{_label(132, 266, "不合格", "middle")}
-{_label(132, 284, "書き直し", "middle")}
+<path d="M230 433 L85 433 L85 215 L184 215" fill="none" stroke="{_GRAY_LINE}" stroke-width="1.5" marker-end="url(#ar)"/>
+{_label(116, 275, "不合格・", "middle")}
+{_label(116, 293, "書き直し", "middle")}
 
-{_card(190, 466, 300, 78, "決定担当", "finalize_node", "候補から最高 score を採用", "human")}
-{_arrow(340, 544, 340, 574)}
+{_card(190, 486, 300, 78, "決定担当", "finalize_node", "全候補から最高スコアを採用", "human")}
+{_arrow(340, 564, 340, 594)}
 
-{_card(190, 576, 300, 78, "あなた（人間）", "投稿担当", "受け取って X に投稿", "human")}
+{_card(190, 596, 300, 78, "あなた（人間）", "投稿担当", "受け取って X に投稿", "human")}
 
-<rect x="200" y="680" width="14" height="14" rx="3" fill="{_PURPLE_FILL}" stroke="{_PURPLE_LINE}" stroke-width="1.5"/>
-{_label(222, 691, "AI（生成・採点）")}
-<rect x="390" y="680" width="14" height="14" rx="3" fill="{_GRAY_FILL}" stroke="{_GRAY_LINE}" stroke-width="1.5"/>
-{_label(412, 691, "人間・検索・決定")}
+<rect x="200" y="704" width="14" height="14" rx="3" fill="{_PURPLE_FILL}" stroke="{_PURPLE_LINE}" stroke-width="1.5"/>
+{_label(222, 715, "AI（生成・採点）")}
+<rect x="390" y="704" width="14" height="14" rx="3" fill="{_GRAY_FILL}" stroke="{_GRAY_LINE}" stroke-width="1.5"/>
+{_label(412, 715, "人間・検索・決定")}
 </svg>"""
 
 # 白背景の上に置いて、ダークテーマでも確実に読めるようにする。
@@ -93,7 +96,7 @@ def _build_png():
     import cairosvg
     os.makedirs(os.path.dirname(DIAGRAM_PNG), exist_ok=True)
     cairosvg.svg2png(bytestring=_SVG.encode("utf-8"), write_to=DIAGRAM_PNG,
-                     output_width=1360, output_height=1424, background_color="white")
+                     output_width=1360, output_height=1520, background_color="white")
     print(f"wrote {DIAGRAM_PNG} ({os.path.getsize(DIAGRAM_PNG)} bytes)")
 
 

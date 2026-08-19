@@ -11,88 +11,108 @@ import posts
 from agent_diagram import DIAGRAM_PNG
 
 # 生成時に自動で埋まる列（表では編集不可にする）
-_LOCKED = ["id", "created_at", "theme", "draft", "hook", "specificity", "length_ok",
-           "auto_score", "revisions", "char_count", "initial_score", "final_from", "rated_at"]
+_LOCKED = ["id", "created_at", "theme", "draft",
+           "hook", "specificity", "clarity", "relatability", "binary",
+           "length_ok", "auto_score", "revisions", "char_count", "initial_score", "final_from", "rated_at"]
 # 表で見せる列の順番（人間が編集する列を前に寄せる）
-_ORDER = ["theme", "draft", "auto_score", "hook", "specificity",
-          "label", "human_hook", "human_specificity", "human_grounded",
+_ORDER = ["theme", "draft", "auto_score",
+          "hook", "specificity", "clarity", "relatability", "binary",
+          "label", "human_hook", "human_specificity", "human_clarity", "human_relatability", "human_grounded",
           "impressions", "likes", "reposts", "replies", "bookmarks",
           "posted", "url", "notes", "revisions", "final_from"]
 # 保存時に "" を null に戻す文字列列
 _STR_EDIT = ["label", "human_grounded", "url", "notes", "posted"]
 
 
-def _dashboard(df):
-    st.subheader("ダッシュボード（改善余地を見る）")
+def _no_data(msg="まだデータがありません"):
+    st.caption(msg)
 
-    # 1) judge vs 人間(good/bad)
+
+def _dashboard(df):
+    st.subheader("ダッシュボード")
+
+    # ① 採点精度
     s = posts.agreement_summary(df)
-    st.markdown("**① judge は人間と合っているか（good/bad）**")
+    st.markdown("**① 採点精度**")
     if s["n"] == 0:
-        st.caption("まだ good/bad 評価がありません。")
+        _no_data("👍/👎 の評価がまだありません")
     else:
         c = st.columns(4)
         c[0].metric("一致率", s["agreement_rate"])
-        c[1].metric("judge適合率", s["judge_precision"] if s["judge_precision"] is not None else "—")
-        c[2].metric("👍平均score", s["mean_score_up"] if s["mean_score_up"] is not None else "—")
-        c[3].metric("👎平均score", s["mean_score_down"] if s["mean_score_down"] is not None else "—")
-        st.caption(f"n={s['n']}（👍{s['up']}/👎{s['down']}）｜👎平均が👍平均を上回ったら judge は当てにならない赤信号")
+        c[1].metric("適合率", s["judge_precision"] or "—")
+        c[2].metric("👍 平均", s["mean_score_up"] or "—")
+        c[3].metric("👎 平均", s["mean_score_down"] or "—")
+        st.caption(f"n={s['n']}（👍{s['up']} / 👎{s['down']}）　👎平均 > 👍平均 なら採点モデルを見直す")
 
-    # 2) 軸別のズレ（judge の rubric をどの軸で直すか）
+    st.divider()
+
+    # ② 軸ズレ
     ab = posts.axis_bias(df)
-    st.markdown("**② どの軸がズレているか（人間版スコアとの差）**")
-    if ab["hook"]["n"] == 0 and ab["specificity"]["n"] == 0:
-        st.caption("人間版 hook/具体性 の入力がまだありません。")
-    else:
-        c = st.columns(2)
-        for i, (name, key) in enumerate([("フック", "hook"), ("具体性", "specificity")]):
-            a = ab[key]
-            if a["n"]:
-                c[i].metric(f"{name} judge−人間", a["mean_diff"], help="＋=judgeが甘い / −=judgeが辛い")
-                c[i].caption(f"平均ズレ幅 {a['mean_abs']}（n={a['n']}）")
-            else:
-                c[i].caption(f"{name}: 入力なし")
-
-    # 3) 事実性（judge が見ていない軸）
-    g = posts.grounded_summary(df)
-    st.markdown("**③ 事実に忠実か（judge が採点していない盲点）**")
-    if g["n"] == 0:
-        st.caption("事実性(ok/ng)の入力がまだありません。")
-    else:
-        c = st.columns(3)
-        c[0].metric("事実NG率", g["ng_rate"])
-        c[1].metric("NG件数", g["ng"])
-        c[2].metric("高得点なのにNG", g["ng_but_pass"], help="judge合格なのに事実NG＝一番危険")
-        st.caption(f"n={g['n']}｜『高得点なのにNG』が出るなら、採点軸に事実性を足す価値がある")
-
-    # 4) revise ループの価値
-    rv = posts.revise_value(df)
-    st.markdown("**④ reviseループは効いているか**")
-    if rv["n"] == 0:
-        st.caption("データがありません。")
+    st.markdown("**② 軸ズレ（モデル − 人間）**")
+    pairs = [("フック", "hook"), ("具体性", "specificity"), ("明確さ", "clarity"), ("共感", "relatability")]
+    if all(ab[key]["n"] == 0 for _, key in pairs):
+        _no_data("一覧で「人:hook〜人:共感」を入力してください")
     else:
         c = st.columns(4)
-        c[0].metric("改善した割合", rv["improved_rate"])
-        c[1].metric("平均スコア改善", rv["mean_delta"])
-        c[2].metric("最終=初稿 / 修正", f"{rv['final_initial']} / {rv['final_revised']}")
-        c[3].metric("平均修正回数", rv["mean_revisions"])
-        st.caption(f"n={rv['n']}｜最終がほぼ『初稿』なら、reviseループはコストに見合っていない")
+        for i, (name, key) in enumerate(pairs):
+            a = ab[key]
+            if a["n"]:
+                c[i].metric(name, a["mean_diff"], help="＋=モデルが甘め　−=モデルが辛め")
+                c[i].caption(f"±{a['mean_abs']}　n={a['n']}")
+            else:
+                c[i].caption(f"{name}　未入力")
 
-    # 5) THRESHOLD の妥当性
+    st.divider()
+
+    # ③ 事実性
+    g = posts.grounded_summary(df)
+    st.markdown("**③ 事実性**")
+    if g["n"] == 0:
+        _no_data("一覧で「事実」列を ok/ng で入力してください")
+    else:
+        c = st.columns(3)
+        c[0].metric("NG率", g["ng_rate"])
+        c[1].metric("NG件数", g["ng"])
+        c[2].metric("高得点+NG", g["ng_but_pass"], help="採点が合格なのに事実NGは盲点")
+        if g["ng_but_pass"]:
+            st.caption("高得点+NG が出ている → 事実性を採点軸に追加する価値あり")
+
+    st.divider()
+
+    # ④ reviseループ
+    rv = posts.revise_value(df)
+    st.markdown("**④ reviseループ**")
+    if rv["n"] == 0:
+        _no_data()
+    else:
+        c = st.columns(4)
+        c[0].metric("改善率", rv["improved_rate"])
+        c[1].metric("平均Δ", rv["mean_delta"])
+        c[2].metric("初稿採用 / 修正採用", f"{rv['final_initial']} / {rv['final_revised']}")
+        c[3].metric("平均修正回数", rv["mean_revisions"])
+        if rv["final_initial"] > rv["final_revised"]:
+            st.caption("初稿採用が多い → reviseループのコスト対効果を確認")
+
+    st.divider()
+
+    # ⑤ 合格ライン
     ts = posts.threshold_summary(df)
-    st.markdown("**⑤ 合格しきい値は妥当か**")
+    st.markdown(f"**⑤ 合格ライン（{config.PASS_TOTAL}点）**")
     if ts["n"] == 0:
-        st.caption("データがありません。")
+        _no_data()
     else:
         c = st.columns(2)
-        c[0].metric(f"pass率（≥{config.THRESHOLD}）", ts["pass_rate"])
-        c[1].metric("pass中の人間good率", ts["passed_good_rate"] if ts["passed_good_rate"] is not None else "—")
-        st.caption("pass率が高いのに人間good率が低いなら、THRESHOLDを上げるか judge を厳しくする")
+        c[0].metric("pass率", ts["pass_rate"])
+        c[1].metric("pass中のgood率", ts["passed_good_rate"] or "—")
+        if ts["passed_good_rate"] is not None and ts["passed_good_rate"] < 0.6:
+            st.caption("pass中のgood率が低い → PASS_TOTAL を上げるかモデルを再学習")
 
-    # 6) エンゲージメント（後で埋める）
+    st.divider()
+
+    # ⑥ エンゲージメント
     has_eng = int(df["impressions"].notna().sum())
-    st.markdown("**⑥ 実エンゲージメント（投稿後に記入）**")
-    st.caption(f"記入済み {has_eng}/{len(df)} 件。溜まったら『auto_score は実際の伸びを予測できるか』を検証する。")
+    st.markdown("**⑥ エンゲージメント**")
+    st.caption(f"記入済み {has_eng} / {len(df)} 件　投稿後に一覧から手入力")
 
 
 def _editor(df_full):
@@ -129,12 +149,17 @@ def _editor(df_full):
             **{c: st.column_config.Column(disabled=True) for c in _LOCKED},
             "draft": st.column_config.TextColumn("投稿", width="large", disabled=True),
             "theme": st.column_config.TextColumn("テーマ", disabled=True),
-            "auto_score": st.column_config.NumberColumn("auto", disabled=True),
-            "hook": st.column_config.NumberColumn("J:hook", disabled=True),
-            "specificity": st.column_config.NumberColumn("J:具体", disabled=True),
+            "auto_score": st.column_config.NumberColumn("score", disabled=True),
+            "hook": st.column_config.NumberColumn("B:hook", disabled=True),
+            "specificity": st.column_config.NumberColumn("B:具体", disabled=True),
+            "clarity": st.column_config.NumberColumn("B:明確", disabled=True),
+            "relatability": st.column_config.NumberColumn("B:共感", disabled=True),
+            "binary": st.column_config.NumberColumn("B:good?", disabled=True),
             "label": st.column_config.SelectboxColumn("評価", options=["", "good", "bad"]),
             "human_hook": st.column_config.NumberColumn("人:hook", min_value=1, max_value=5, step=1),
             "human_specificity": st.column_config.NumberColumn("人:具体", min_value=1, max_value=5, step=1),
+            "human_clarity": st.column_config.NumberColumn("人:明確", min_value=1, max_value=5, step=1),
+            "human_relatability": st.column_config.NumberColumn("人:共感", min_value=1, max_value=5, step=1),
             "human_grounded": st.column_config.SelectboxColumn("事実", options=["", "ok", "ng"]),
             "impressions": st.column_config.NumberColumn("imp", min_value=0),
             "likes": st.column_config.NumberColumn("いいね", min_value=0),
@@ -164,8 +189,8 @@ def render():
     # 「何を評価しているか」の参照として、ワークフロー設計をここに置く
     with st.expander("AIエージェント部署の設計（何を評価しているか）"):
         st.image(DIAGRAM_PNG, use_container_width=True)
-        st.caption("紫 = 生成AI（Gemini）が処理 / グレー = 人間・検索・決定。"
-                   "入力(retrieve)・judgeの採点(evaluate)・reviseループ・しきい値の妥当性を、このページで評価する。")
+        st.caption("紫 = AIが処理（草案ライター=Gemini / 採点担当=自前BERT4軸） / グレー = 人間・検索・決定。"
+                   "採点の妥当性・reviseループの効き・しきい値を、このページで評価する。")
 
     df = posts.load_df()
     if len(df) == 0:
