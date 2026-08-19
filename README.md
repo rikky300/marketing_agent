@@ -117,7 +117,7 @@ BERT (cl-tohoku/bert-base-japanese-v3)
   └─ binary_head       → Linear(768→2) → good/bad
 ```
 
-損失は回帰4軸のMSE＋分類のCrossEntropyの合成、最適化はAdamW（lr=2e-5）。学習・評価は`notebooks/post_evaluator.ipynb`（Google Colab）で行う。学習済みモデル(`local/models/post_evaluator/`)はサイズが大きいためGit管理外で、[ローカルで使う](#ローカルで使う)には別途配置が必要（下記参照）。
+損失は回帰4軸のMSE＋分類のCrossEntropyの合成、最適化はAdamW（lr=2e-5）。学習は`python notebooks/train_evaluator.py`一発でローカル完結（同じ構成のColab版`notebooks/post_evaluator.ipynb`もある）。学習済みモデル(`local/models/post_evaluator/`)はサイズが大きいためGit管理外で、[ローカルで使う](#ローカルで使う)には別途学習が必要（下記参照）。
 
 判断基準の検証は継続中で、評価タブで以下を確認できる: LLM judge時代の記録 vs 自前モデル vs 人間評価の一致度、軸別のズレ、reviseループの効き、合格ラインの妥当性。
 
@@ -166,9 +166,11 @@ marketing_agent/
 │
 ├── data/posts.csv          投稿物DB本体(1投稿=1行。使うほど貯まっていく)
 ├── docs/scoring_rubric.md  採点ルーブリック(4軸+binaryの定義)
-├── notebooks/              BERTファインチューニング(Colab)
-│   ├── post_evaluator.ipynb
-│   └── gen_labels.py       学習データ(labels.jsonl)の生成スクリプト
+├── notebooks/              BERTファインチューニング
+│   ├── train_evaluator.py  コマンドでローカル学習(Colab不要)
+│   ├── post_evaluator.ipynb  同じ内容のColab版(GPUを使いたい時)
+│   ├── gen_labels.py       学習データ(labels.jsonl)の生成スクリプト
+│   └── labels.jsonl        学習データ本体(116件)
 │
 └── local/                  Git管理外。生成物・DL物をまとめて格納
     ├── chroma_db/          ベクトルDB(index.py実行で生成)
@@ -210,10 +212,10 @@ pip install -r requirements.txt
 ### 3. APIキーを設定
 
 ```bash
-cp .env.example .env
+echo "GOOGLE_API_KEY=" > .env
 ```
 
-[Google AI Studio](https://aistudio.google.com/apikey) でキーを発行し、`.env` を開いて次のように貼り付ける。
+[Google AI Studio](https://aistudio.google.com/apikey) でキーを発行し、`.env` を開いて `=` の後ろに貼り付ける。
 
 ```
 GOOGLE_API_KEY=ここに発行したキーを貼り付け
@@ -221,23 +223,24 @@ GOOGLE_API_KEY=ここに発行したキーを貼り付け
 
 （生成に使うGemini用のキーのみでよい。埋め込みはローカルモデルなのでAPIキー不要）
 
-### 4. 採点モデルを配置する
+### 4. 採点モデルを学習して配置する
 
-投稿の採点は自前ファインチューニング済みのBERTモデルのみで行う（LLMはジャッジに使わない設計のため、これが無いと生成ループが止まる）。
+投稿の採点は自前ファインチューニング済みのBERTモデルのみで行う（LLMはジャッジに使わない設計のため、これが無いと生成ループが止まる）。コマンド一発でローカル学習できる（Colab/Jupyter不要）。
 
 ```bash
-mkdir -p local/models/post_evaluator
+python notebooks/train_evaluator.py
 ```
 
-`notebooks/post_evaluator.ipynb`（Google Colab）で学習したモデル一式を `local/models/post_evaluator/` に置く（`local/` はGit管理外。生成物・DL物をまとめる場所）。
+`notebooks/labels.jsonl`（同梱の116件のラベル付きデータ）で学習し、`local/models/post_evaluator/`（`local/` はGit管理外。生成物・DL物をまとめる場所）に保存する。GPUがあれば自動で使う。CPUのみでも既定10エポックが数分で終わる程度の小さいデータ量。
 
 ```
 local/models/post_evaluator/
 ├── pytorch_model.pt        BERT本体+5ヘッドの重み(約440MB)
-├── tokenizer.json
-├── tokenizer_config.json
+├── tokenizer_config.json / vocab.txt
 └── meta.json
 ```
+
+エポック数や保存先は引数で変えられる（`python notebooks/train_evaluator.py --epochs 5 --out 別の場所`）。より大きい学習環境(GPU)を使いたい場合は、同じ構成の `notebooks/post_evaluator.ipynb`（Google Colab用）も用意している。
 
 （サイズが大きくGit管理外のため同梱していない。自分でnotebookを回して学習するか、学習済みモデルの提供を受けて配置する）
 

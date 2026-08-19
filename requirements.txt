@@ -19,3 +19,4 @@ torch
 transformers
 fugashi
 unidic-lite
+scikit-learn
