@@ -277,19 +277,21 @@ cd ~; git clone https://github.com/rikky300/marketing_agent.git; cd marketing_ag
 
 ### ZIPでダウンロードした場合
 
-展開したフォルダをターミナルで開いてから（Finderなら右クリック→「フォルダに新規ターミナル」、Windowsならフォルダのアドレスバーに`cmd`または`powershell`と入力）貼り付ける。
+ブラウザの標準設定のままなら `~/Downloads`（Windowsは `~\Downloads`）に`marketing_agent-main`という名前で展開される。下のコマンドはそれを前提に、まずそのフォルダへ`cd`してから始まる。違う場所に展開した場合は、コマンド先頭の`cd`のパスを実際の場所に書き換えること（そのままだと「フォルダが無い」で安全に止まるだけなので、間違えても実害は無い）。
 
 macOS / Linux:
 
 ```bash
-python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && echo -n "Google AI StudioのAPIキーを貼り付けてEnter: " && read -s KEY && echo && echo "GOOGLE_API_KEY=$KEY" > .env && python notebooks/train_evaluator.py && python index.py && streamlit run app.py
+cd ~/Downloads/marketing_agent-main && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && echo -n "Google AI StudioのAPIキーを貼り付けてEnter: " && read -s KEY && echo && echo "GOOGLE_API_KEY=$KEY" > .env && python notebooks/train_evaluator.py && python index.py && streamlit run app.py
 ```
 
 Windows (PowerShell):
 
 ```powershell
-python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -r requirements.txt; $secure = Read-Host "Google AI StudioのAPIキーを貼り付けてEnter" -AsSecureString; $KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)); Set-Content -Path .env -Value "GOOGLE_API_KEY=$KEY" -Encoding ascii; python notebooks/train_evaluator.py; python index.py; streamlit run app.py
+cd ~\Downloads\marketing_agent-main; python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -r requirements.txt; $secure = Read-Host "Google AI StudioのAPIキーを貼り付けてEnter" -AsSecureString; $KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)); Set-Content -Path .env -Value "GOOGLE_API_KEY=$KEY" -Encoding ascii; python notebooks/train_evaluator.py; python index.py; streamlit run app.py
 ```
+
+Windows PowerShellは`;`区切りだと1つのコマンドが失敗しても後続が実行され続けるので、実行中に赤いエラーが出たらそこで一度止めて内容を確認すること。
 
 PowerShellで`.venv\Scripts\Activate.ps1`がスクリプト実行ポリシーでブロックされる場合は、管理者権限不要の`Set-ExecutionPolicy -Scope Process RemoteSigned`を先に実行しておくとよい。
 
