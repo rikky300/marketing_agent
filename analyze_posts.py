@@ -2,7 +2,7 @@
 実行: python analyze_posts.py
 """
 import config
-from posts import ENGAGEMENT_COLS, agreement_summary, load_df
+from scoring.posts import ENGAGEMENT_COLS, agreement_summary, load_df
 
 
 def main():
@@ -21,7 +21,7 @@ def main():
     if s["n"] == 0:
         print("まだ👍/👎評価がありません。")
     else:
-        print(f"合格しきい値 THRESHOLD = {config.THRESHOLD}")
+        print(f"合格しきい値 PASS_TOTAL = {config.PASS_TOTAL}")
         print(f"👍(good) {s['up']} 件 / 👎(bad) {s['down']} 件")
         print(f"👍 の平均 auto_score : {s['mean_score_up']}")
         print(f"👎 の平均 auto_score : {s['mean_score_down']}")
@@ -31,7 +31,7 @@ def main():
         print("-" * 46)
         cell = {("pass", "good"): 0, ("pass", "bad"): 0, ("fail", "good"): 0, ("fail", "bad"): 0}
         for _, r in rated.iterrows():
-            j = "pass" if r["auto_score"] >= config.THRESHOLD else "fail"
+            j = "pass" if r["auto_score"] >= config.PASS_TOTAL else "fail"
             cell[(j, r["label"])] += 1
         print("              人間good   人間bad")
         print(f"  judge合格      {cell[('pass','good')]:>5}   {cell[('pass','bad')]:>5}")

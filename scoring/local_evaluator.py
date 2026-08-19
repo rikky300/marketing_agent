@@ -4,8 +4,8 @@ CLAUDE.md §7.2 の構成に合わせた実装:
   投稿テキスト → BERT(cl-tohoku/bert-base-japanese-v3) → [CLS] →
     hook_head / specificity_head (sigmoid 0〜1、表示は1〜5) + binary_head (good/bad)
 
-nodes._evaluate が config.USE_LOCAL_EVALUATOR=True のとき get_evaluator().score() を呼ぶ。
-torch/transformers はここでしか import しない（Cloud側=フラグOffでは読み込まれない）。
+nodes._evaluate が get_evaluator().score() を呼ぶ（採点はこのモデルのみ。LLMはジャッジに使わない）。
+torch/transformers はここでしか import しない。
 
 ⚠ 実際の学習ノートブックの保存形式に合わせて、下の「reconcile」箇所を確認すること:
   - 重みファイル名と state_dict のキー（モデル全体の state_dict を想定）

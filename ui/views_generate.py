@@ -1,17 +1,15 @@
-"""生成アプリ（デプロイ対象）。1画面1意思決定のウィザード。
+"""生成ページ。1画面1意思決定のウィザード。
   ① 製品情報 → ② テーマ → ③ 生成 → ④ 結果(コピー＋👍/👎)
-評価ダッシュボード・内部採点は出さない（それはローカル eval_app.py）。"""
+詳しい採点内訳は出さない（サッと生成して終われるように）。じっくり見るときは「② 評価」タブへ。"""
 import hashlib
 import json
 from datetime import datetime
 
 import streamlit as st
-import streamlit.components.v1 as components
 
-from graph import app as agent
-import posts
-import rag
-import sources
+from core.graph import app as agent
+from core import rag, sources
+from scoring import posts
 
 PRESET_THEMES = [
     "開発の裏側",
@@ -101,8 +99,8 @@ def _save_generated(run_id, theme, fs):
 
 
 def _copy_button(draft):
-    # st.markdown 内の onclick は除去されるため components.html(iframe)で。clipboard不可環境向けに execCommand も。
-    components.html(f"""
+    # st.markdown 内の onclick は除去されるため st.iframe で。clipboard不可環境向けに execCommand も。
+    st.iframe(f"""
     <button id="copyBtn" style="
     width:100%; background:#1a1a1a; color:white; border:none; border-radius:6px;
     padding:0.6rem; font-size:1rem; cursor:pointer;">コピー</button>
@@ -178,14 +176,19 @@ def _step_generate():
     if c1.button("← 戻る"):
         _goto("theme")
     if c2.button("投稿を生成する", type="primary"):
-        with st.spinner(f"『{st.session_state.theme}』で投稿を生成中..."):
-            context = _context_for(st.session_state.get("src_text"), st.session_state.theme)
-            fs = _run_agent(st.session_state.theme, context)
-            st.session_state.result = fs if fs.get("draft") else None
-            st.session_state.run_id = datetime.now().isoformat(timespec="seconds")
-            st.session_state.rated_run = None
-            if st.session_state.result:
-                _save_generated(st.session_state.run_id, st.session_state.theme, st.session_state.result)
+        try:
+            with st.spinner(f"『{st.session_state.theme}』で投稿を生成中..."):
+                context = _context_for(st.session_state.get("src_text"), st.session_state.theme)
+                fs = _run_agent(st.session_state.theme, context)
+                st.session_state.result = fs if fs.get("draft") else None
+                st.session_state.run_id = datetime.now().isoformat(timespec="seconds")
+                st.session_state.rated_run = None
+                if st.session_state.result:
+                    _save_generated(st.session_state.run_id, st.session_state.theme, st.session_state.result)
+        except Exception as ex:
+            st.session_state.result = None
+            st.error(f"生成中にエラーが発生しました: {ex}")
+            return
         if st.session_state.result:
             _goto("result")
         else:
@@ -215,11 +218,11 @@ def _step_result():
     rated = run_id != "" and st.session_state.get("rated_run") == run_id
     st.markdown("**この投稿どうでした?**")
     c1, c2 = st.columns(2)
-    if c1.button("👍 良い", disabled=rated, use_container_width=True):
+    if c1.button("👍 良い", disabled=rated, width="stretch"):
         posts.set_label(run_id, "good")
         st.session_state.rated_run = run_id
         st.rerun()
-    if c2.button("👎 いまいち", disabled=rated, use_container_width=True):
+    if c2.button("👎 いまいち", disabled=rated, width="stretch"):
         posts.set_label(run_id, "bad")
         st.session_state.rated_run = run_id
         st.rerun()
@@ -242,7 +245,7 @@ def render():
     if "wiz_step" not in st.session_state:
         st.session_state.wiz_step = "product"
 
-    st.title("マーケティング Agent")
+    st.title("AgentMark — 生成")
     step = st.session_state.wiz_step
     i = _STEPS.index(step)
     st.progress((i + 1) / len(_STEPS))

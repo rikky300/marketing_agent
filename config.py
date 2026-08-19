@@ -1,14 +1,16 @@
 """全体の設定をまとめる場所。値を変えたいときはここだけ見ればいい。"""
 
-# 生成・採点・埋め込みに使うモデル
+# 生成・採点に使うモデル
 CHAT_MODEL = "gemini-2.5-flash"
-EMBED_MODEL = "gemini-embedding-001"
+# 埋め込みはコスト削減のためAPIを使わず、ローカルにダウンロードして動かす多言語埋め込みモデル
+# (sentence-transformers経由。初回実行時にHugging Faceから自動DL・以降はキャッシュを使う)
+EMBED_MODEL = "intfloat/multilingual-e5-small"
 
 # ファイルとベクトルDBの場所
 PRODUCT_FILE = "product.md"
 PLAYBOOK_FILE = "playbook.md"
-CHROMA_DIR = "chroma_db"      # ベクトルDBの保存先フォルダ
-COLLECTION = "product"        # DB内のコレクション名（index.pyとrag.pyで一致させる）
+CHROMA_DIR = "local/chroma_db"  # ベクトルDBの保存先フォルダ（Git管理外。local/にまとめている）
+COLLECTION = "product"          # DB内のコレクション名（index.pyとrag.pyで一致させる）
 
 # 検索・生成・ループの設定
 TOP_K = 3            # 検索で取り出すチャンク数
@@ -22,12 +24,9 @@ PASS_TOTAL = 18
 SHORT_TEXT_LIMIT = 4000  # これ以下の文字数なら埋め込みせず全文をそのまま使う
 URL_TIMEOUT = 15         # URL取得のタイムアウト秒
 
-# 自前採点モデル（BERT）。True で採点を Gemini judge からローカルモデルに切り替える。
-# スコア=ローカルモデル / comment=Gemini の役割分担（BERTはcommentを生成できないため）。
-# 読み込み/推論に失敗したら自動で Gemini judge にフォールバックする。
-USE_LOCAL_EVALUATOR = True   # 自前モデルで採点する（torch/モデルが無いCloud等では自動でGeminiにフォールバック）
-LOCAL_MODEL_DIR = "models/post_evaluator"  # 重み・トークナイザー・meta.json を置く場所
-BERT_MODEL = "cl-tohoku/bert-base-japanese-v3"  # ベースにした事前学習モデル
+# 自前採点モデル（BERT）。採点はこのモデルのみで行う（LLMはジャッジに使わない）。
+LOCAL_MODEL_DIR = "local/models/post_evaluator"  # 重み・トークナイザー・meta.json を置く場所（Git管理外）
+BERT_MODEL = "cl-tohoku/bert-base-japanese-v3"    # ベースにした事前学習モデル
 
 # チャンク分割
 CHUNK_SIZE = 300

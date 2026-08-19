@@ -1,6 +1,6 @@
 """ノードとエッジをつないでグラフ（app）を組み立てる。"""
 from langgraph.graph import StateGraph, START, END
-from nodes import (
+from core.nodes import (
     State, retrieve_node, generate_node, revise_node, evaluate_node,
     finalize_node, should_continue,
 )

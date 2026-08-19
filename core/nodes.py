@@ -3,8 +3,8 @@ import operator
 from typing import Annotated, TypedDict
 from langchain_core.messages import HumanMessage
 import config
-from models import writer, judge, get_text, Evaluation
-from rag import retrieve, build_system
+from core.models import writer, get_text, Evaluation
+from core.rag import retrieve, build_system
 
 
 # ── 状態：ノード間で持ち回るデータ ──
@@ -28,33 +28,16 @@ def _write(theme, context, instruction):
 
 
 def _evaluate(draft):
-    """採点する。USE_LOCAL_EVALUATOR なら自前モデル、失敗時は Gemini judge にフォールバック。"""
-    if config.USE_LOCAL_EVALUATOR:
-        try:
-            print("[採点] 採点器: 自前モデル(BERT)")
-            return _evaluate_local(draft)
-        except Exception as e:  # モデル未配置・依存欠如・推論失敗など
-            print(f"[採点] ⚠ ローカルモデル失敗→Gemini judgeにフォールバック: {e}")
-    else:
-        print("[採点] 採点器: Gemini judge")
-    return _evaluate_gemini(draft)
-
-
-def _evaluate_gemini(draft):
-    prompt = f"次のX投稿を、辛口の編集者として採点してください。\n\n投稿:\n{draft}"
-    return judge.invoke(prompt)
-
-
-def _evaluate_local(draft):
-    """採点は自前BERTモデルのみ（4軸+binary）。commentは作らない（空）。length_okはコードで判定。"""
-    from local_evaluator import get_evaluator
+    """採点は自前BERTモデルのみで行う（LLMはジャッジに使わない）。
+    4軸+binaryを返す。length_okはコードで判定。"""
+    from scoring.local_evaluator import get_evaluator
     s = get_evaluator().score(draft)
     print(f"[採点] 4軸 hook={s['hook']} 具体性={s['specificity']} 明確さ={s['clarity']}"
           f" 共感={s['relatability']} / binary={'good' if s['binary'] else 'bad'}")
     length_ok = len(draft) <= 140
     return Evaluation(hook=s["hook"], specificity=s["specificity"],
                       clarity=s["clarity"], relatability=s["relatability"],
-                      binary=s["binary"], length_ok=length_ok, comment="")
+                      binary=s["binary"], length_ok=length_ok)
 
 
 def _score(e):
@@ -95,7 +78,7 @@ def generate_node(state: State):
 
 
 def _revise_hints(e):
-    """採点結果から具体的な改善方向を作る（commentが空でも機能させる）。"""
+    """採点結果(4軸+140字判定)から具体的な改善方向を作る。"""
     hints = []
     if e.hook <= 3:
         hints.append("・冒頭の一行を強くする（読者の悩みへの問いかけ／逆説／具体的な事実で引く）")
@@ -107,8 +90,6 @@ def _revise_hints(e):
         hints.append("・読者（個人開発者）の悩みや感情に直接触れる")
     if not e.length_ok:
         hints.append("・140字以内に必ず収める")
-    if getattr(e, "comment", ""):  # Geminiフォールバック時はコメントも活かす
-        hints.append(f"・編集者の指摘: {e.comment}")
     if not hints:
         hints.append("・フック・具体性・明確さ・共感を全体的に磨く")
     return "\n".join(hints)

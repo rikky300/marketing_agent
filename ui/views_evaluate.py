@@ -7,8 +7,8 @@ import pandas as pd
 import streamlit as st
 
 import config
-import posts
-from agent_diagram import DIAGRAM_PNG
+from scoring import posts
+from ui.agent_diagram import DIAGRAM_PNG
 
 # 生成時に自動で埋まる列（表では編集不可にする）
 _LOCKED = ["id", "created_at", "theme", "draft",
@@ -141,7 +141,7 @@ def _editor(df_full):
     edited = st.data_editor(
         disp,
         key="posts_editor",
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         num_rows="fixed",
         column_order=_ORDER,
@@ -182,13 +182,13 @@ def _editor(df_full):
 
 
 def render():
-    st.title("評価")
+    st.title("AgentMark — 評価")
     st.caption("溜まった投稿を評価し、ワークフローのどこを直すか判断するためのページ")
     st.divider()
 
     # 「何を評価しているか」の参照として、ワークフロー設計をここに置く
     with st.expander("AIエージェント部署の設計（何を評価しているか）"):
-        st.image(DIAGRAM_PNG, use_container_width=True)
+        st.image(DIAGRAM_PNG, width="stretch")
         st.caption("紫 = AIが処理（草案ライター=Gemini / 採点担当=自前BERT4軸） / グレー = 人間・検索・決定。"
                    "採点の妥当性・reviseループの効き・しきい値を、このページで評価する。")
 

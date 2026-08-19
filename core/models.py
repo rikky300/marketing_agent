@@ -2,19 +2,25 @@
 from dotenv import load_dotenv
 load_dotenv()  # .env のAPIキーを読み込む（どのファイルから実行してもここで確実に）
 
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_huggingface import HuggingFaceEmbeddings
 from pydantic import BaseModel, Field
 import config
 
-# 文章をベクトルに変換するモデル（検索用）
-embeddings = GoogleGenerativeAIEmbeddings(model=config.EMBED_MODEL)
+# 文章をベクトルに変換するモデル（検索用）。API課金が発生しないよう、ローカルにDLして動かす
+# multilingual-e5系は "query: " / "passage: " のprefixを付けると検索精度が上がる仕様のため付与する
+embeddings = HuggingFaceEmbeddings(
+    model_name=config.EMBED_MODEL,
+    encode_kwargs={"prompt": "passage: "},
+    query_encode_kwargs={"prompt": "query: "},
+)
 
 # 投稿を書くモデル（多様性のため temperature 高め）
 writer = ChatGoogleGenerativeAI(model=config.CHAT_MODEL, temperature=0.9)
 
 
 class Evaluation(BaseModel):
-    """SNS投稿を辛口の編集者として採点した結果（scoring_rubric.md の5軸）。"""
+    """投稿の採点結果（scoring_rubric.md の4軸+binary）。自前BERTモデルが埋める。"""
     hook: int = Field(description=(
         "冒頭一行が読み手のスクロールを止める力。1〜5の整数。"
         "5=最初の一行で『自分のことだ』と思わせ続きを読みたくなる。"
@@ -36,11 +42,6 @@ class Evaluation(BaseModel):
     ))
     binary: int = Field(description="総合good/bad。良い(自分なら投稿する/伸びそう)なら1、そうでなければ0。")
     length_ok: bool = Field(description="全体が140字以内に収まっているか")
-    comment: str = Field(description="最も効く改善点を一つだけ、短い日本語で")
-
-
-# 採点するモデル（ブレないよう temperature 0、決まった形 Evaluation で返す）
-judge = ChatGoogleGenerativeAI(model=config.CHAT_MODEL, temperature=0).with_structured_output(Evaluation)
 
 
 def get_text(response):

@@ -1,10 +1,14 @@
+# GitHubに上げないもの一式（生成物・ダウンロード物・秘密情報）はここにまとめる
 .env
 .venv/
-chroma_db/
+# chroma_db(ベクトルDB) / models(採点モデルの重み) をまとめて格納
+local/
 __pycache__/
 *.pyc
 CLAUDE.md
+.claude/
+.DS_Store
+
+# 投稿物DBだけは例外でコミットする（使うほど育つデータ資産のため）
 data/*
 !data/posts.csv
-models/
-.DS_Store

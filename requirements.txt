@@ -9,3 +9,13 @@ python-dotenv
 pypdf
 beautifulsoup4
 requests
+
+# 埋め込み(RAG検索用)。API課金なしでローカルにDLして動かす
+langchain-huggingface
+sentence-transformers
+
+# 自前採点モデル(BERT)のローカル推論・学習用
+torch
+transformers
+fugashi
+unidic-lite

@@ -4,7 +4,7 @@
 
 プロダクト情報を渡してテーマを選ぶだけで、投稿案をAIが生成→自動採点→基準に届かなければ自己修正、を繰り返して1本に仕上げる。作者自身が最初のユーザーで、このエージェントで自分のプロダクトの投稿を作りながら開発している。
 
-🔗 **公開中のアプリ**: https://agentmarkth.streamlit.app
+**ダウンロードしてローカルで動かすアプリ。** 公開ホスティングはせず、あえて手元だけで動かしている。理由は[コンセプト](#コンセプト-ローカルで育てるagentmark)を参照。
 
 ---
 
@@ -16,7 +16,31 @@
 
 汎用的に「バズる投稿を書いて」と頼むのではなく、**自分のプロダクト固有の情報に基づいて**投稿を作り、**書きっぱなしにせず採点して直す**ところまでをエージェントにやらせている。
 
-現在は「LLMに採点させて自己修正ループを回す」段階から一歩進めて、**人間の評価データを貯めてBERTを自前でファインチューニングし、採点器そのものを自分の審美眼に近づける**フェーズに取り組んでいる（詳細は[採点の仕組み](#採点の仕組み-llm-judgeから自前mlモデルへ)を参照）。
+---
+
+## コンセプト：ローカルで育てるAgentMark
+
+このツールは、公開Webサービスにはせず、**あえてローカル環境だけで動かす**ように作っている。理由は2つ。
+
+1. **使うほど自分専用に育つ** — 手元で使い続けるたびに、自分の投稿・自分の良い/悪い評価・自分の実際のエンゲージメントがローカルに貯まる。そのデータで採点モデル（BERT）を再学習し、汎用の「それっぽい採点」から「自分の審美眼に近い採点」へ育てていく
+2. **公開する前に、まず信頼できる形にする** — LLM-as-a-Judgeの採点をそのまま信用せず、自前モデル・人間評価・実エンゲージメントを突き合わせて検証してから、初めて他の人にも使える形にする
+
+### 将来のシナリオ：ワークフロー型エージェント1体 → AIマーケティング部署へ
+
+今のAgentMarkは「テーマを渡すと1投稿を作る」ワークフロー型のエージェント1体（[アーキテクチャ](#アーキテクチャ)を参照）。
+これを、リサーチ・ライティング・採点・分析・戦略提案を専門分業する複数のエージェントに分割し、
+1つの**「AIマーケティング部署」**として機能させることを最終的なゴールに見据えている。
+
+```
+現在地 ── ローカルで「1投稿を作る」ワークフロー型エージェント
+   │       generate → evaluate → revise の自己修正ループ(LangGraph)
+   ↓
+次   ── ローカルで採点モデルを自分のデータに特化させる
+   │       人間評価を貯める → BERTファインチューニング → judge/自前モデル/人間の一致を検証
+   ↓
+先   ── 生成品質・採点精度が安定したら、複数エージェントに分業してマーケティング部署化
+           リサーチ担当・ライター・編集(採点)・分析担当、を連携させて運用する
+```
 
 ---
 
@@ -30,7 +54,7 @@
 >
 > AgentMarkは、あなたのプロダクト情報から投稿案を自動生成。さらにAIが採点・修正を繰り返し、刺さる文章に進化させます。「良いもの」を「届く」に変えませんか？
 
-自動採点 8点（合格）・人間評価 👍good。この投稿を含め、AgentMarkが生成した投稿の一部は実際に作者のXアカウントに投稿されている。
+自動採点 8点（合格）・人間評価 (👍good or bad)
 
 ---
 
@@ -39,9 +63,9 @@
 - プロダクト情報をRAGで参照して投稿を生成（ChromaDB）。他プロダクトでも、README/LP/PDF/URL/直接入力から投稿を作れる
 - 1案ずつ「生成 → 採点 → 書き直し」を繰り返す自己修正ループ（LangGraph）
 - ループ中に作った全案から一番点数の高い案を最終採用
-- 採点はLLM-as-a-Judge（Gemini）と、自前学習のBERTモデルの2方式に対応（設定で切替）
+- 採点は自前学習のBERTモデルのみで行う（LLMはジャッジに使わない。生成はGeminiを使う）
 - テーマはプリセットから選ぶか自由入力。文字数カウント・コピーボタン付きのWebUI（Streamlit）
-- 投稿を人間が👍/👎評価して蓄積し、採点モデルの精度検証・再学習に使うローカル専用の評価ダッシュボード
+- 投稿を人間が👍/👎評価して蓄積し、採点モデルの精度検証・再学習に使う評価ダッシュボード
 - AIエージェント部署の設計図をUIから確認できる
 
 ---
@@ -58,7 +82,7 @@
 START
   → retrieve   : テーマでベクトルDBを検索し、関連情報をcontextに載せる
   → generate   : 初稿を1つ書く（Gemini）
-  → evaluate   : 採点して候補リストに貯める（BERT / Gemini judge）
+  → evaluate   : 採点して候補リストに貯める（自前BERT）
   → should_continue 判定:
         合格ライン(18点)以上 かつ 140字以内 → finalize へ
         修正3回に到達            → finalize へ（不合格でも打ち切り）
@@ -77,12 +101,9 @@ END
 
 このプロジェクトの技術的な核心は「採点をどう信用できるものにするか」という点にある。
 
-1. **現行: LLM-as-a-Judge（Gemini）** — 構造化出力で4軸+binaryを採点。手軽だが、基準がブレやすく、コスト・待ち時間もかかる（投稿1本でGeminiを最大8回呼ぶ）
-2. **開発中: 自前BERTファインチューニング** — `cl-tohoku/bert-base-japanese-v3` の上に5つのヘッド（4回帰＋1分類）を乗せ、人間の評価データで学習。判断基準:
-   - LLM judge vs 自前モデル vs 人間評価の一致度を検証
-   - 生成アプリで👍/👎を集め、投稿物DB（`data/posts.csv`）に蓄積
-   - 一定件数貯まったらそのデータでBERTを再学習し、Gemini judgeとの一致率を比較
-   - 十分な精度が出たら、生成ループの採点をBERTに切り替える（`config.USE_LOCAL_EVALUATOR`）
+最初はGemini(LLM-as-a-Judge)に構造化出力で採点させていた。手軽だが基準がブレやすく、コスト・待ち時間もかかる（投稿1本でGeminiを最大8回呼ぶ計算になる）。この構成に頼り続けると「LLMが良いと言った投稿をLLMが採点して合格にする」という自己参照ループになり、判断基準を検証できない。
+
+そこで、人間の評価データを貯めて **`cl-tohoku/bert-base-japanese-v3` をファインチューニングした自前モデル** に採点を完全移行した。**現在、生成ループの採点はこの自前BERTモデルのみで行い、LLMはジャッジとして一切使わない**（生成そのものはGeminiを使う）。
 
 ```
 投稿テキスト
@@ -96,7 +117,9 @@ BERT (cl-tohoku/bert-base-japanese-v3)
   └─ binary_head       → Linear(768→2) → good/bad
 ```
 
-損失は回帰4軸のMSE＋分類のCrossEntropyの合成、最適化はAdamW（lr=2e-5）。学習・評価は`notebooks/post_evaluator.ipynb`（Google Colab）で行う。モデル未配置・依存未インストールの環境（Streamlit Cloud等）では自動でGemini judgeにフォールバックする。
+損失は回帰4軸のMSE＋分類のCrossEntropyの合成、最適化はAdamW（lr=2e-5）。学習・評価は`notebooks/post_evaluator.ipynb`（Google Colab）で行う。学習済みモデル(`local/models/post_evaluator/`)はサイズが大きいためGit管理外で、[ローカルで使う](#ローカルで使う)には別途配置が必要（下記参照）。
+
+判断基準の検証は継続中で、評価タブで以下を確認できる: LLM judge時代の記録 vs 自前モデル vs 人間評価の一致度、軸別のズレ、reviseループの効き、合格ラインの妥当性。
 
 ---
 
@@ -107,11 +130,9 @@ BERT (cl-tohoku/bert-base-japanese-v3)
 | LLM・生成 | Gemini 2.5 Flash |
 | エージェント | LangGraph |
 | RAG | LangChain + ChromaDB |
-| 埋め込み | Google Generative AI Embeddings |
-| 採点（現行） | Gemini 2.5 Flash 構造化出力（LLM-as-a-Judge） |
-| 採点（開発中） | BERT（`cl-tohoku/bert-base-japanese-v3`）ファインチューニング（PyTorch） |
-| UI | Streamlit |
-| デプロイ | Streamlit Cloud |
+| 埋め込み | ローカル埋め込みモデル（`intfloat/multilingual-e5-small`, sentence-transformers。API課金なし） |
+| 採点 | 自前ファインチューニングBERT（`cl-tohoku/bert-base-japanese-v3`, PyTorch）。LLMはジャッジに使わない |
+| UI | Streamlit（ローカル実行のみ） |
 
 ---
 
@@ -119,76 +140,166 @@ BERT (cl-tohoku/bert-base-japanese-v3)
 
 ```
 marketing_agent/
-├── config.py              全設定を一箇所に集約(モデル名・パス・閾値)
-├── models.py               AIモデルの窓口・採点スキーマ(Evaluation)
+├── app.py                  Streamlitアプリ本体（① 生成 / ② 評価 をタブで切替）
+├── main.py                 CLIエントリポイント
 ├── index.py                ベクトル化専用。product.md更新時だけ実行
-├── rag.py                  検索(ChromaDB) + 添付ドキュメント用の in-memory 検索
-├── sources.py               添付ソース読取(PDF/テキスト/URL)
-├── nodes.py                 各ノード(retrieve/generate/evaluate/revise/finalize)とState
-├── graph.py                 ノードとエッジをつないでLangGraphのappを組み立てる
-├── main.py                  CLIエントリポイント
+├── analyze_posts.py        投稿物DBの集計をCLIで見る
+├── config.py               全設定を一箇所に集約(モデル名・パス・閾値)
+├── product.md / playbook.md  プロダクト情報 / 伸びる投稿の型(RAGの参照元)
 │
-├── app.py                   【デプロイ対象】生成アプリ(Streamlit)
-├── eval_app.py               【ローカル専用】評価アプリ
-├── views_generate.py         生成ページ本体
-├── views_evaluate.py         評価ダッシュボード本体
-├── agent_diagram.py          部署の設計図(SVG生成 + PNG書き出し)
+├── core/                   エージェント本体(LangGraph)
+│   ├── nodes.py            各ノード(retrieve/generate/evaluate/revise/finalize)とState
+│   ├── graph.py            ノードとエッジをつないでappを組み立てる
+│   ├── models.py           AIモデルの窓口・採点スキーマ(Evaluation)
+│   ├── rag.py              検索(ChromaDB) + 添付ドキュメント用の in-memory 検索
+│   └── sources.py          添付ソース読取(PDF/テキスト/URL)
 │
-├── posts.py                  投稿物DB(CSV)の読み書き・集計
-├── data/posts.csv             投稿物DB本体(1投稿=1行)
-├── product.md / playbook.md   プロダクト情報 / 伸びる投稿の型(RAGの参照元)
+├── ui/                     Streamlit UI
+│   ├── views_generate.py   生成ページ(4ステップのウィザード)
+│   ├── views_evaluate.py   評価ダッシュボード(採点精度・軸ズレ・投稿一覧の編集)
+│   ├── ui_common.py        set_page_config + CSS
+│   └── agent_diagram.py    部署の設計図(SVG生成 + PNG書き出し)
 │
-├── local_evaluator.py         自前BERTモデルのローカル推論
-├── notebooks/post_evaluator.ipynb  BERTファインチューニング(Colab)
-└── notebooks/gen_labels.py    学習データ(labels.jsonl)の生成スクリプト
+├── scoring/                採点・投稿物DB
+│   ├── posts.py            投稿物DB(CSV)の読み書き・集計
+│   └── local_evaluator.py  自前BERTモデルのローカル推論
+│
+├── data/posts.csv          投稿物DB本体(1投稿=1行。使うほど貯まっていく)
+├── docs/scoring_rubric.md  採点ルーブリック(4軸+binaryの定義)
+├── notebooks/              BERTファインチューニング(Colab)
+│   ├── post_evaluator.ipynb
+│   └── gen_labels.py       学習データ(labels.jsonl)の生成スクリプト
+│
+└── local/                  Git管理外。生成物・DL物をまとめて格納
+    ├── chroma_db/          ベクトルDB(index.py実行で生成)
+    └── models/             採点モデルの重み(下記「採点モデルを配置する」参照)
 ```
 
 ---
 
-## セットアップ
+## ローカルで使う
 
-### 1. クローンして環境構築
+以下を上から順にターミナルにコピー&ペーストしていけば動く（`.env`へのAPIキー貼り付けだけ手動）。
+動作確認済み: Python 3.11 / 3.13、macOS。
+
+### 1. ダウンロード
+
+git がある場合:
 
 ```bash
 git clone https://github.com/rikky300/marketing_agent.git
 cd marketing_agent
+```
+
+git を使わない場合は、GitHubの `Code → Download ZIP` からダウンロードして展開し、そのフォルダにターミナルで移動する（`cd` の後は展開したフォルダ名に読み替える）。
+
+```bash
+cd marketing_agent-main
+```
+
+### 2. 環境構築
+
+```bash
 python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+source .venv/bin/activate   # Windows(PowerShell): .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-### 2. APIキーを設定
+`torch` / `transformers` / `sentence-transformers` を含むため、初回インストールは数分・合計2GB前後かかる（採点モデル用・埋め込みモデル用）。
 
-`.env` を作成し、[Google AI Studio](https://aistudio.google.com/apikey) で発行したキーを書く。
-
-```
-GOOGLE_API_KEY=あなたのキー
-```
-
-### 3. プロダクト情報を書く
-
-`product.md` に自分のアプリの情報（特徴・ターゲット・開発の背景など）を書く。
-
-### 4. ベクトルDBを作成して起動
+### 3. APIキーを設定
 
 ```bash
-python index.py          # product.md 更新時は再実行
-streamlit run app.py     # WebUI（生成のみ）
-python main.py           # CLI
+cp .env.example .env
 ```
 
-### ローカルで評価ダッシュボード・自前採点モデルを使う場合
+[Google AI Studio](https://aistudio.google.com/apikey) でキーを発行し、`.env` を開いて次のように貼り付ける。
+
+```
+GOOGLE_API_KEY=ここに発行したキーを貼り付け
+```
+
+（生成に使うGemini用のキーのみでよい。埋め込みはローカルモデルなのでAPIキー不要）
+
+### 4. 採点モデルを配置する
+
+投稿の採点は自前ファインチューニング済みのBERTモデルのみで行う（LLMはジャッジに使わない設計のため、これが無いと生成ループが止まる）。
 
 ```bash
-pip install -r requirements-local.txt   # torch等・約2GB
-streamlit run eval_app.py               # 評価ダッシュボード(ローカル専用)
+mkdir -p local/models/post_evaluator
 ```
+
+`notebooks/post_evaluator.ipynb`（Google Colab）で学習したモデル一式を `local/models/post_evaluator/` に置く（`local/` はGit管理外。生成物・DL物をまとめる場所）。
+
+```
+local/models/post_evaluator/
+├── pytorch_model.pt        BERT本体+5ヘッドの重み(約440MB)
+├── tokenizer.json
+├── tokenizer_config.json
+└── meta.json
+```
+
+（サイズが大きくGit管理外のため同梱していない。自分でnotebookを回して学習するか、学習済みモデルの提供を受けて配置する）
+
+### 5. ベクトルDBを作成して起動
+
+```bash
+python index.py
+streamlit run app.py
+```
+
+ブラウザで `http://localhost:8501` が自動的に開く。初回は埋め込みモデル(`intfloat/multilingual-e5-small`、約470MB)がHugging Faceから自動ダウンロードされる。「① 生成」タブでテーマを選んで投稿を作り、「② 評価」タブで👍/👎の内訳や採点精度を確認できる。
+
+ここまでで、同梱の`product.md`（AgentMark自身の製品情報）を題材に投稿が生成できるはず。CLIだけで試したい場合は `python main.py`。
 
 ---
 
-## デプロイ（Streamlit Cloud）
+## 自分のプロダクトに使う場合
 
-GitHubにpushすると自動で再デプロイされる。`.env` / `chroma_db/` / `models/` は `.gitignore` で除外。Settings → Secrets に `GOOGLE_API_KEY` を設定すればよい。Streamlit Cloudはファイルシステムが毎回リセットされるため、ベクトルDBは初回起動時に自動生成される（`rag.py`）。評価データ（`data/posts.csv`）はCloud側から書き戻せないため、蓄積はローカル実行 → commit/pushが前提。
+同梱の `product.md` はAgentMark自身の製品情報（サンプル兼、作者の実利用データ）。自分のプロダクトで使うには:
+
+### 1. `product.md` を書き換える
+
+特徴・ターゲット・開発の背景などを自分のプロダクトの内容に置き換える。
+
+```markdown
+# アプリ名
+
+一言説明。
+
+## 特徴
+- 特徴1
+- 特徴2
+
+## 誰のためか
+ターゲットの説明。
+
+## なぜ作ったか
+開発の背景。
+```
+
+### 2. ベクトルDBを作り直す
+
+```bash
+python index.py
+```
+
+### 3.（任意）投稿の型を自分好みに調整する
+
+`playbook.md`（伸びる投稿の型。生成時に全文差し込まれる）を編集すると、生成される投稿のトーンや型を調整できる。
+
+### 4. 自分の内容をGitHubに上げないようにする
+
+`product.md` はサンプルとしてリポジトリにコミット済みのファイルなので、自分の内容に書き換えた後にそのまま`git push`すると、上流のGitHubリポジトリに反映されてしまう。上げたくない場合は、たとえば以下のどちらか。
+
+```bash
+# 方法A: この後 git に変更を反映させない(pushしない/コミットしない)ならこのままでOK
+
+# 方法B: 以後 product.md の変更をgitに追跡させない
+git update-index --skip-worktree product.md
+```
+
+ZIPでダウンロードした場合はそもそもgit管理下にないので、この心配は不要。
 
 ---
 
@@ -198,10 +309,10 @@ GitHubにpushすると自動で再デプロイされる。`.env` / `chroma_db/` 
 - [ ] LLM judge・自前モデル・人間評価の一致率を検証し、生成ループの採点を自前モデルに切り替え
 - [ ] 事実忠実性（プロダクト情報への忠実さ）を採点する軸を追加
 - [ ] 伸びた投稿をplaybookに追記するフィードバックループ
-- [ ] 推論サーバーをCloud Runに分離し、認証・課金を付けて他ユーザーに開放
+- [ ] 生成品質・採点精度が安定したら、リサーチ・ライティング・採点・分析を専門分業する複数エージェントに分割し、AIマーケティング部署として運用する
 
 ---
 
 ## 開発の経緯
 
-1個のファイルで生成→採点→表示を実装 → 採点をPydantic構造化出力（LLM-as-a-Judge）で実装 → 採点基準をルーブリック化 → LangGraphで自己修正ループを実装 → RAG追加（InMemory→ChromaDB） → 役割ごとにファイル分割 → Streamlit UIを実装してデプロイ → 生成フローを「1案ずつ生成→採点→書き直し」の逐次ループに変更 → 投稿物DBと評価アプリを分離 → 添付ソース（PDF/URL/手入力）から生成できるように拡張 → BERT採点モデルのファインチューニング環境をColabで構築（現在ここ）
+1個のファイルで生成→採点→表示を実装 → 採点をPydantic構造化出力（LLM-as-a-Judge）で実装 → 採点基準をルーブリック化 → LangGraphで自己修正ループを実装 → RAG追加（InMemory→ChromaDB） → 役割ごとにファイル分割 → Streamlit UIを実装 → 生成フローを「1案ずつ生成→採点→書き直し」の逐次ループに変更 → 投稿物DBと評価ダッシュボードを分離 → 添付ソース（PDF/URL/手入力）から生成できるように拡張 → BERT採点モデルのファインチューニング環境をColabで構築 → 生成と評価を1つのローカルアプリに統合（現在ここ）

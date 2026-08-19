@@ -3,7 +3,7 @@ import os, shutil
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import config
-from models import embeddings
+from core.models import embeddings
 
 def main():
     # 作り直しのたびに古いDBを消して、重複を防ぐ

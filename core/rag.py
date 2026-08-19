@@ -4,7 +4,7 @@ from pathlib import Path
 from langchain_chroma import Chroma
 from langchain_core.messages import SystemMessage
 import config
-from models import embeddings
+from core.models import embeddings
 
 
 def _ensure_db():

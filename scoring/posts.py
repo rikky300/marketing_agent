@@ -4,9 +4,8 @@
 生成時に行を作り(add_post)、👍/👎は後から同じ行に upsert(set_label)、
 エンゲージメントは投稿後にしか分からないので列だけ用意して空(null)のまま置く。
 
-保存先: data/posts.csv（リポジトリにコミットして GitHub から参照する）。
-注意: Streamlit Cloud はファイルに書き戻せない/再起動で消えるため、
-貯める作業はローカル実行 → commit/push、Cloud は読み取り専用が前提。
+保存先: data/posts.csv。ローカルで使い続けるほどこのファイルにデータが貯まり、
+それが採点モデル(BERT)の再学習データになって、使うほど自分専用に育っていく。
 """
 import os
 from datetime import datetime

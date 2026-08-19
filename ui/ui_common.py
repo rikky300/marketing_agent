@@ -1,9 +1,9 @@
-"""ページ共通のセットアップ（set_page_config + CSS）。app.py と eval_app.py から呼ぶ。"""
+"""ページ共通のセットアップ（set_page_config + CSS）。app.py から呼ぶ。"""
 import streamlit as st
 
 _CSS = """
 <style>
-/* Streamlit Cloud の余計な表示（上部ツールバー・メニュー・フッター）を隠す */
+/* Streamlitの余計な表示（上部ツールバー・メニュー・フッター）を隠す */
 #MainMenu {{ visibility: hidden; }}
 header {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}

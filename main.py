@@ -1,7 +1,7 @@
 """本体。テーマを選んで投稿を作り、完成した投稿を表示する。
    実行: python main.py （事前に一度 python index.py でDBを作っておくこと）"""
 import config
-from graph import app
+from core.graph import app
 
 PRESET_THEMES = [
     "開発の裏側",
