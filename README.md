@@ -257,6 +257,44 @@ streamlit run app.py
 
 ---
 
+## まとめて実行する（1行版）
+
+上記①〜⑤を1つのコマンドにまとめたもの。ターミナルに貼り付けるとAPIキーの入力だけ求められ、そのままアプリが起動するところまで進む。
+
+### git cloneでダウンロードした場合
+
+macOS / Linux:
+
+```bash
+cd ~ && git clone https://github.com/rikky300/marketing_agent.git && cd marketing_agent && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && echo -n "Google AI StudioのAPIキーを貼り付けてEnter: " && read KEY && echo "GOOGLE_API_KEY=$KEY" > .env && python notebooks/train_evaluator.py && python index.py && streamlit run app.py
+```
+
+Windows (PowerShell):
+
+```powershell
+cd ~; git clone https://github.com/rikky300/marketing_agent.git; cd marketing_agent; python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -r requirements.txt; $KEY = Read-Host "Google AI StudioのAPIキーを貼り付けてEnter"; Set-Content -Path .env -Value "GOOGLE_API_KEY=$KEY" -Encoding ascii; python notebooks/train_evaluator.py; python index.py; streamlit run app.py
+```
+
+### ZIPでダウンロードした場合
+
+展開したフォルダをターミナルで開いてから（Finderなら右クリック→「フォルダに新規ターミナル」、Windowsならフォルダのアドレスバーに`cmd`または`powershell`と入力）貼り付ける。
+
+macOS / Linux:
+
+```bash
+python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && echo -n "Google AI StudioのAPIキーを貼り付けてEnter: " && read KEY && echo "GOOGLE_API_KEY=$KEY" > .env && python notebooks/train_evaluator.py && python index.py && streamlit run app.py
+```
+
+Windows (PowerShell):
+
+```powershell
+python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -r requirements.txt; $KEY = Read-Host "Google AI StudioのAPIキーを貼り付けてEnter"; Set-Content -Path .env -Value "GOOGLE_API_KEY=$KEY" -Encoding ascii; python notebooks/train_evaluator.py; python index.py; streamlit run app.py
+```
+
+PowerShellで`.venv\Scripts\Activate.ps1`がスクリプト実行ポリシーでブロックされる場合は、管理者権限不要の`Set-ExecutionPolicy -Scope Process RemoteSigned`を先に実行しておくとよい。
+
+---
+
 ## 自分のプロダクトに使う場合
 
 同梱の `product.md` はAgentMark自身の製品情報（サンプル兼、作者の実利用データ）。自分のプロダクトで使うには:
