@@ -266,13 +266,13 @@ streamlit run app.py
 macOS / Linux:
 
 ```bash
-cd ~ && git clone https://github.com/rikky300/marketing_agent.git && cd marketing_agent && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && echo -n "Google AI StudioのAPIキーを貼り付けてEnter: " && read KEY && echo "GOOGLE_API_KEY=$KEY" > .env && python notebooks/train_evaluator.py && python index.py && streamlit run app.py
+cd ~ && git clone https://github.com/rikky300/marketing_agent.git && cd marketing_agent && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && echo -n "Google AI StudioのAPIキーを貼り付けてEnter: " && read -s KEY && echo && echo "GOOGLE_API_KEY=$KEY" > .env && python notebooks/train_evaluator.py && python index.py && streamlit run app.py
 ```
 
 Windows (PowerShell):
 
 ```powershell
-cd ~; git clone https://github.com/rikky300/marketing_agent.git; cd marketing_agent; python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -r requirements.txt; $KEY = Read-Host "Google AI StudioのAPIキーを貼り付けてEnter"; Set-Content -Path .env -Value "GOOGLE_API_KEY=$KEY" -Encoding ascii; python notebooks/train_evaluator.py; python index.py; streamlit run app.py
+cd ~; git clone https://github.com/rikky300/marketing_agent.git; cd marketing_agent; python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -r requirements.txt; $secure = Read-Host "Google AI StudioのAPIキーを貼り付けてEnter" -AsSecureString; $KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)); Set-Content -Path .env -Value "GOOGLE_API_KEY=$KEY" -Encoding ascii; python notebooks/train_evaluator.py; python index.py; streamlit run app.py
 ```
 
 ### ZIPでダウンロードした場合
@@ -282,13 +282,13 @@ cd ~; git clone https://github.com/rikky300/marketing_agent.git; cd marketing_ag
 macOS / Linux:
 
 ```bash
-python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && echo -n "Google AI StudioのAPIキーを貼り付けてEnter: " && read KEY && echo "GOOGLE_API_KEY=$KEY" > .env && python notebooks/train_evaluator.py && python index.py && streamlit run app.py
+python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && echo -n "Google AI StudioのAPIキーを貼り付けてEnter: " && read -s KEY && echo && echo "GOOGLE_API_KEY=$KEY" > .env && python notebooks/train_evaluator.py && python index.py && streamlit run app.py
 ```
 
 Windows (PowerShell):
 
 ```powershell
-python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -r requirements.txt; $KEY = Read-Host "Google AI StudioのAPIキーを貼り付けてEnter"; Set-Content -Path .env -Value "GOOGLE_API_KEY=$KEY" -Encoding ascii; python notebooks/train_evaluator.py; python index.py; streamlit run app.py
+python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -r requirements.txt; $secure = Read-Host "Google AI StudioのAPIキーを貼り付けてEnter" -AsSecureString; $KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)); Set-Content -Path .env -Value "GOOGLE_API_KEY=$KEY" -Encoding ascii; python notebooks/train_evaluator.py; python index.py; streamlit run app.py
 ```
 
 PowerShellで`.venv\Scripts\Activate.ps1`がスクリプト実行ポリシーでブロックされる場合は、管理者権限不要の`Set-ExecutionPolicy -Scope Process RemoteSigned`を先に実行しておくとよい。
