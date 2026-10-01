@@ -1,0 +1,46 @@
+<!doctype html><html><head><meta charset="utf-8"><title>AgentMark System</title>
+<style>body{margin:0;background:#fff;font-family:"Helvetica Neue",Arial,"Hiragino Sans",sans-serif}svg{display:block;max-width:100%;height:auto;margin:auto}
+.n{font-size:12px;fill:#222;text-anchor:middle}.s{font-size:10px;fill:#555;text-anchor:middle}.g{font-size:11px;fill:#333;font-weight:bold}.l{font-size:10px;fill:#666}</style></head><body>
+<svg viewBox="0 30 930 470" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#555"/></marker></defs>
+<rect x="10" y="40" width="910" height="450" fill="none" stroke="#6b8fd6" rx="4"/>
+<rect x="150" y="70" width="560" height="405" fill="none" stroke="#666" rx="4"/>
+<text x="180" y="88" class="g">ローカル PC（Streamlit アプリ）</text>
+<image href="https://cdn.jsdelivr.net/npm/simple-icons@13/icons/streamlit.svg" x="158" y="75" width="16" height="16"/>
+<rect x="170" y="100" width="520" height="200" fill="none" stroke="#999" stroke-dasharray="4 3" rx="4"/>
+<text x="185" y="118" class="g">エージェント（LangGraph）</text>
+<rect x="740" y="70" width="160" height="300" fill="none" stroke="#666" stroke-dasharray="5 4" rx="4"/>
+<text x="755" y="88" class="g">外部</text>
+<g transform="translate(50,150)" fill="#222"><circle cx="22" cy="14" r="12"/><path d="M0 58 C0 36 10 30 22 30 C34 30 44 36 44 58 Z"/></g><text x="72" y="224" class="n">利用者</text>
+<rect x="200" y="140" width="56" height="56" rx="6" fill="#1C3C3C"/><image href="https://cdn.jsdelivr.net/npm/simple-icons@13/icons/langchain.svg" x="212" y="152" width="32" height="32" style="filter:invert(1)"/><text x="228" y="212" class="n">検索</text><text x="228" y="225" class="s">(ChromaDB・e5 埋め込み)</text>
+<rect x="320" y="140" width="56" height="56" rx="6" fill="#8E75B2"/><image href="https://cdn.jsdelivr.net/npm/simple-icons@13/icons/googlegemini.svg" x="332" y="152" width="32" height="32" style="filter:invert(1)"/><text x="348" y="212" class="n">生成・書き直し</text><text x="348" y="225" class="s">(Gemini)</text>
+<rect x="440" y="140" width="56" height="56" rx="6" fill="#EE4C2C"/><image href="https://cdn.jsdelivr.net/npm/simple-icons@13/icons/pytorch.svg" x="452" y="152" width="32" height="32" style="filter:invert(1)"/><text x="468" y="212" class="n">採点</text><text x="468" y="225" class="s">(自前 BERT・4 軸)</text>
+<rect x="580" y="140" width="56" height="56" rx="6" fill="#555555"/><g transform="translate(596,151)" fill="none" stroke="#fff" stroke-width="2.5"><path d="M0 0 H16 L24 8 V34 H0 Z"/><path d="M5 15 H19 M5 21 H19 M5 27 H14"/></g><text x="608" y="212" class="n">最良案を採用</text><text x="608" y="225" class="s">(全候補から)</text>
+<rect x="200" y="360" width="56" height="56" rx="6" fill="#6B7280"/><g transform="translate(216,371)" fill="none" stroke="#fff" stroke-width="2.5"><path d="M0 0 H16 L24 8 V34 H0 Z"/><path d="M5 15 H19 M5 21 H19 M5 27 H14"/></g><text x="228" y="432" class="n">product.md 等</text><text x="228" y="445" class="s">(プロダクト情報・型)</text>
+<rect x="360" y="360" width="56" height="56" rx="6" fill="#6B7280"/><g transform="translate(374,372)" fill="none" stroke="#fff" stroke-width="2.5"><ellipse cx="14" cy="5" rx="13" ry="5"/><path d="M1 5 V27 C1 33 27 33 27 27 V5"/><path d="M1 16 C1 22 27 22 27 16"/></g><text x="388" y="432" class="n">投稿 DB</text><text x="388" y="445" class="s">(posts.csv・👍/👎)</text>
+<rect x="520" y="360" width="56" height="56" rx="6" fill="#EE4C2C"/><image href="https://cdn.jsdelivr.net/npm/simple-icons@13/icons/pytorch.svg" x="532" y="372" width="32" height="32" style="filter:invert(1)"/><text x="548" y="432" class="n">採点モデルの学習</text><text x="548" y="445" class="s">(BERT 微調整)</text>
+<rect x="792" y="110" width="56" height="56" rx="6" fill="#8E75B2"/><image href="https://cdn.jsdelivr.net/npm/simple-icons@13/icons/googlegemini.svg" x="804" y="122" width="32" height="32" style="filter:invert(1)"/><text x="820" y="182" class="n">Gemini API</text><text x="820" y="195" class="s">(Google AI Studio)</text>
+<rect x="792" y="250" width="56" height="56" rx="6" fill="#FFD21E"/><image href="https://cdn.jsdelivr.net/npm/simple-icons@13/icons/huggingface.svg" x="804" y="262" width="32" height="32"/><text x="820" y="322" class="n">Hugging Face</text><text x="820" y="335" class="s">(BERT・e5 の重み)</text>
+<path d="M100 168 H196" stroke="#555" fill="none" marker-end="url(#a)"/>
+<text x="110" y="160" class="l" style="text-anchor:start">テーマ</text>
+<path d="M256 168 H316" stroke="#555" fill="none" marker-end="url(#a)"/>
+<path d="M376 168 H436" stroke="#555" fill="none" marker-end="url(#a)"/>
+<path d="M468 136 V118 H338 V136" stroke="#555" fill="none" marker-end="url(#a)"/>
+<text x="408" y="113" class="l" style="text-anchor:middle">基準未達なら書き直し</text>
+<path d="M496 168 H576" stroke="#555" fill="none" marker-end="url(#a)"/>
+<text x="536" y="160" class="l" style="text-anchor:middle">合格</text>
+<path d="M228 356 V230" stroke="#555" fill="none" marker-end="url(#a)"/>
+<text x="236" y="300" class="l" style="text-anchor:start">索引</text>
+<path d="M608 230 V330 H388 V356" stroke="#555" fill="none" marker-end="url(#a)"/>
+<text x="450" y="324" class="l" style="text-anchor:start">記録</text>
+<path d="M416 388 H516" stroke="#555" fill="none" marker-end="url(#a)"/>
+<text x="430" y="380" class="l" style="text-anchor:start">評価を学習</text>
+<path d="M548 356 V236" stroke="#555" fill="none" marker-end="url(#a)" stroke-dasharray="4 3"/>
+<text x="556" y="300" class="l" style="text-anchor:start">重み</text>
+<path d="M362 136 V90 H770 V138 H788" stroke="#555" fill="none" marker-end="url(#a)"/>
+<text x="560" y="84" class="l" style="text-anchor:middle">生成</text>
+<path d="M788 278 H760 V388 H580" stroke="#555" fill="none" marker-end="url(#a)" stroke-dasharray="4 3"/>
+<text x="640" y="380" class="l" style="text-anchor:start">初回にダウンロード</text>
+<path d="M72 222 V462 H300 V388 H356" stroke="#555" fill="none" marker-end="url(#a)" stroke-dasharray="4 3"/>
+<text x="80" y="455" class="l" style="text-anchor:start">👍/👎 の評価</text>
+</svg></body></html>
